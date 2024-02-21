@@ -13,7 +13,15 @@ def lire_alpha(data,label):
     X = [i.flatten() for i in matrix]
     return np.array(X)
 
-
+def one_hot_collate(batch):
+    data, labels = zip(*batch)
+    data = torch.stack(data)  # Converts list of tensors to a single tensor
+    
+    # Convert labels to one-hot encoding
+    labels = torch.tensor(labels)
+    one_hot_labels = torch.zeros(len(labels), 10).scatter_(1, labels.unsqueeze(1), 1)
+    
+    return data, one_hot_labels
 
 # Define a transform to normalize and flatten the data
 transform = transforms.Compose([

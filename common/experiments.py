@@ -17,7 +17,6 @@ def run_experiment(model,pretrain_model,pretraining:Args,training:Args):
     n_steps = pretraining.n_steps
     alpha = pretraining.alpha
     digits_test = pretraining.data
-    mode = pretraining.mode
     batch_size = pretraining.batch_size
     k = pretraining.gibbs
 
@@ -33,7 +32,7 @@ def run_experiment(model,pretrain_model,pretraining:Args,training:Args):
     print("[INFO] training model 1 from scratch")
     model.train(train_loader,n_epochs,lr)
     print("[INFO] Pretraining  model 2 ")
-    pretrain_model.pretrain(digits_test,n_steps,alpha,mode,batch_size,k)
+    pretrain_model.pretrain(digits_test,n_steps,alpha,batch_size,k)
     print("[INFO] training model 2")
     pretrain_model.train(train_loader,n_epochs,lr)
 

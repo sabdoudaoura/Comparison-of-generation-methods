@@ -5,6 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from tqdm import trange
 from typing import List
+from torch.utils.data import DataLoader, TensorDataset
 
 def compute_metrics(logits,true_labels):
     _, predicted = torch.max(logits, 1)  # Get the index of the maximum value in each row
@@ -52,10 +53,11 @@ class RBM:
         Contrastive Divergence 1
         """
         batch_size = min(batch_size,len(data))
-        num_batchs = len(data)//batch_size
+        dataset = TensorDataset(data)  # `data` est votre tenseur
+        data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
         for i in range(n_steps):
-            for j in range(num_batchs):
-                x = data[j*batch_size:(j+1)*batch_size]
+            for batch in data_loader:
+                x = batch[0]
                 x_ = self.gibbs(x,k)
                 u,v = self.forward(x),self.forward(x_)
                 self.W.data = self.W + alpha*(torch.matmul(u.T, x) - torch.matmul(v.T, x_))/batch_size
@@ -95,12 +97,6 @@ class DBN:
         samples = x_
         return samples
     
-    def get_all_params(self):
-        params = []
-        for rbm in self.layers:
-            params.extend([rbm.W, rbm.b, rbm.a])
-        return params
-
 
 class DNN(nn.Module):
     def __init__(self,input_size,hidden_sizes: List,out_size,device):
@@ -109,7 +105,15 @@ class DNN(nn.Module):
         self.dbn = DBN(input_size,hidden_sizes,device)
         self.fc = nn.Linear(hidden_sizes[-1],out_size)
         self.device = device
-
+    
+    
+    
+        # Manually register parameters of each RBM layer
+        for i, rbm in enumerate(self.dbn.layers):
+            self.register_parameter(name=f'W_{i}', param=rbm.W)
+            self.register_parameter(name=f'b_{i}', param=rbm.b)
+            
+            
     def pretrain(self,data,n_steps,alpha,batch_size=30,k=1):
         self.dbn.train(data,n_steps,alpha,batch_size,k)
     
@@ -121,10 +125,7 @@ class DNN(nn.Module):
         return out
     
     def train(self,dataloader,n_epochs,lr):
-        optimizer = torch.optim.Adam([
-                                {'params': self.parameters()},
-                                {'params': self.dbn.get_all_params()}  # Add custom object's parameter
-                            ],lr=lr)
+        optimizer = torch.optim.Adam(self.parameters(),lr=lr)
         for i in trange(n_epochs):
             avg_loss, avg_acc = 0.0, 0.0
             n = 0.
@@ -133,16 +134,16 @@ class DNN(nn.Module):
                 inputs = inputs.to(self.device)
                 labels = labels.to(self.device)
                 preds = self(inputs)
-                loss = F.cross_entropy(preds,labels)
+                loss = F.binary_cross_entropy(preds,labels)
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
-                n+= inputs.size(0)
+                """n+= inputs.size(0)
                 acc = compute_metrics(preds,labels)
                 avg_acc += acc*inputs.size(0)
                 avg_loss += loss.item()*inputs.size(0)
             avg_loss, avg_acc = avg_loss / n, avg_acc / n
-            """if i%2==0:
+            if i%2==0:
                 print("epoch {0} Loss:= {1} Accuracy: {2}".format(i+1,avg_loss,avg_acc))"""
 
     @torch.no_grad()
@@ -154,7 +155,7 @@ class DNN(nn.Module):
             inputs = inputs.to(self.device)
             labels = labels.to(self.device)
             preds = self(inputs)
-            loss = F.cross_entropy(preds,labels)
+            loss = F.binary_cross_entropy(preds,labels)
             n+= inputs.size(0)
             acc = compute_metrics(preds,labels)
             avg_acc += acc*inputs.size(0)

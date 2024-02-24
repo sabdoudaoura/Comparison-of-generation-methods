@@ -98,12 +98,13 @@ class DBN:
         return samples
     
 
+
 class DNN(nn.Module):
     def __init__(self,input_size,hidden_sizes: List,out_size,device):
         super(DNN,self).__init__()
         self.input_size = input_size
         self.dbn = DBN(input_size,hidden_sizes,device)
-        self.fc = nn.Linear(hidden_sizes[-1],out_size)
+        self.fc = nn.Sequential(nn.Identity(),nn.Dropout(0.2),nn.ReLU(),nn.Linear(hidden_sizes[-1],out_size))
         self.device = device
     
     

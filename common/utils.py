@@ -25,7 +25,7 @@ def one_hot_collate(batch):
 
 # Define a transform to normalize and flatten the data
 transform = transforms.Compose([
-    transforms.Resize((20, 16)),  # Resize the images to 20x16
+    #transforms.Resize((20, 16)),  # Resize the images to 20x16
     transforms.ToTensor(),
     transforms.Lambda(lambda x: binarize_image(x)),  # binarise
     transforms.Lambda(lambda x: torch.flatten(x)) , # Flatten the images

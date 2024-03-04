@@ -15,6 +15,25 @@ def compute_metrics(logits,true_labels):
     accuracy = correct / total
     return accuracy
 
+def calculate_mse(original_images, reconstructed_images):
+    """
+    Calculate the Mean Squared Error (MSE) between original and reconstructed images.
+    
+    Parameters:
+    - original_images: A list or tenosr of original images.
+    - reconstructed_images: A list or tensor of reconstructed images.
+    
+    Returns:
+    - mean_squared_error: The average MSE over all the images.
+    """
+
+    if original_images.shape != reconstructed_images.shape:
+        raise ValueError("Original and reconstructed images must have the same shape.")
+    mse_per_image = np.mean((original_images - reconstructed_images) ** 2, axis=1)
+    mean_squared_error = np.mean(mse_per_image)
+    
+    return mean_squared_error
+
 class RBM:
     def __init__(self,input_size=320,hidden_size=10,device=None):
         super(RBM,self).__init__()
@@ -85,7 +104,9 @@ class DBN:
             layer = self.layers[i]
             layer.train(data_,n_steps,alpha,batch_size,k)
             data_ = layer.forward(data_)
-    
+            
+
+        
     def generate(self,n_images,k):
         layer = self.layers[-1]
         x = torch.zeros((n_images,layer.input_size),device=self.device)

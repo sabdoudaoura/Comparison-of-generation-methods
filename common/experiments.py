@@ -1,11 +1,9 @@
-from networks import*
-from utils import*
+from .networks import*
+from .utils import*
 class Args:
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
             setattr(self, key, value)
-
-
 
 
 def get_config(input_size,num_classes,layer_config,device):
@@ -13,6 +11,38 @@ def get_config(input_size,num_classes,layer_config,device):
     pretrain_model = DNN(input_size,layer_config,num_classes,device)
     return model,pretrain_model
 
+
+def run_experiment_rbm(model,pretraining):
+    device = pretraining.device
+    n_steps = pretraining.n_steps
+    alpha = pretraining.alpha
+    digits_test = pretraining.data
+    batch_size = pretraining.batch_size
+    k = pretraining.gibbs
+    digits_test = digits_test.to(device)
+    
+    print("[INFO] training rbm")
+    model.train(digits_test,n_steps,alpha,batch_size,k)
+    latent = model.forward(digits_test)
+    reconstructed = model.backward(latent)
+    Reconstruction_error = calculate_mse(digits_test.detach().cpu().numpy(),reconstructed.detach().cpu().numpy())
+    gen = model.generate(10,1000)
+    return Reconstruction_error,gen
+
+
+def run_experiment_dbn(model,pretraining):
+    device = pretraining.device
+    n_steps = pretraining.n_steps
+    alpha = pretraining.alpha
+    digits_test = pretraining.data
+    batch_size = pretraining.batch_size
+    k = pretraining.gibbs
+    digits_test = digits_test.to(device)
+    
+    print("[INFO] training DBN")
+    model.train(digits_test,n_steps,alpha,batch_size,k)
+    gen = model.generate(20,1000)
+    return gen
 def run_experiment(model,pretrain_model,pretraining:Args,training:Args):
     n_steps = pretraining.n_steps
     alpha = pretraining.alpha

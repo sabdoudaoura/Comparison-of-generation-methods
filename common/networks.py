@@ -85,7 +85,7 @@ class RBM:
                 self.a.data = self.a + alpha*(torch.sum(x - x_, dim=0))/batch_size
 
     def generate(self,n_images,k=10):
-        x = torch.zeros((n_images,self.input_size),device=self.device)
+        x = torch.randn((n_images,self.input_size),device=self.device)
         samples = self.gibbs(x,k)
         return samples
 
@@ -110,8 +110,7 @@ class DBN:
         
     def generate(self,n_images,k):
         layer = self.layers[-1]
-        x = torch.zeros((n_images,layer.input_size),device=self.device)
-        #x = torch.rand((n_images,layer.input_size),device=self.device) pour tester avec une init aleatoire
+        x = torch.randn((n_images,layer.input_size),device=self.device)
         x_ = layer.gibbs(x,k)
         for layer in self.layers[-2::-1]:
             prob = layer.backward(x_)
@@ -162,13 +161,6 @@ class DNN(nn.Module):
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
-                """n+= inputs.size(0)
-                acc = compute_metrics(preds,labels)
-                avg_acc += acc*inputs.size(0)
-                avg_loss += loss.item()*inputs.size(0)
-            avg_loss, avg_acc = avg_loss / n, avg_acc / n
-            if i%2==0:
-                print("epoch {0} Loss:= {1} Accuracy: {2}".format(i+1,avg_loss,avg_acc))"""
 
     @torch.no_grad()
     def evaluate(self,val_loader):

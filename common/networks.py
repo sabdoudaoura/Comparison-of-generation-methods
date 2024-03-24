@@ -187,64 +187,60 @@ class VariationalAutoEncoder(nn.Module):
         self.z_dim=z_dim
         self.input_dim=input_dim
         # encoder
-        self.img_2hid1 = nn.Linear(self.input_dim, 256)
-        self.img_2hid2 = nn.Linear(256, 128)
-        self.img_2hid3 = nn.Linear(128, 20)
+        self.img_2hid1 = nn.Linear(self.input_dim, 512)
+        self.img_2hid2 = nn.Linear(512, 256)
         
 
 
-        self.hid_2mu = nn.Linear(20, self.z_dim)
-        self.hid_2sigma = nn.Linear(20, self.z_dim)
+        self.hid_2mu = nn.Linear(256, self.z_dim)
+        self.hid_2sigma = nn.Linear(256, self.z_dim)
 
         # decoder
-        self.z_2hid1 = nn.Linear(z_dim, 20)
-        self.z_2hid2 = nn.Linear(20, 128)
-        self.z_2hid3 = nn.Linear(128, 256)
-        self.hid_2img = nn.Linear(256, self.input_dim)
+        self.z_2hid1 = nn.Linear(z_dim, 256)
+        self.z_2hid3 = nn.Linear(256, 512)
+        self.hid_2img = nn.Linear(512, self.input_dim)
 
     def encode(self, x):
         h = F.relu(self.img_2hid1(x))
         h = F.relu(self.img_2hid2(h))
-        h = F.relu(self.img_2hid3(h))
         mu = self.hid_2mu(h)
-        sigma = self.hid_2sigma(h)
-        return mu, sigma
+        log_sigma = self.hid_2sigma(h)
+        return mu, log_sigma
 
     def decode(self, z):
         new_h = F.relu(self.z_2hid1(z))
-        new_h = F.relu(self.z_2hid2(new_h))
         new_h = F.relu(self.z_2hid3(new_h))
         x = torch.sigmoid(self.hid_2img(new_h))
         return x
 
     def forward(self, x):
-      mu, sigma = self.encode(x)
+      mu, log_sigma = self.encode(x)
 
       # Sample from latent distribution from encoder
-      epsilon = torch.randn_like(sigma)
-      z_reparametrized = mu + sigma*epsilon
+      epsilon = torch.randn_like(log_sigma)
+      z_reparametrized = mu + torch.exp(0.5*log_sigma)*epsilon
 
       x = self.decode(z_reparametrized)
-      return x, mu, sigma
+      return x, mu, log_sigma
 
     def generate_images(self, num_samples):
         with torch.no_grad():
             z = torch.randn(num_samples, self.z_dim).to(self.device)
             samples = self.decode(z)
-            samples = torch.where(samples < 0.5, torch.zeros_like(samples), torch.ones_like(samples))
+            
         return samples
 
     def reconstruct_images(self, x):
         generated_images = []
         for image in x:
             with torch.no_grad():
-                #image = torch.clamp(image.view(1, -1), 0, 1)
+                
                 mean, std = self.encode(image.to(self.device))
                 epsilon = torch.randn_like(std)
                 z = mean + epsilon * std
                 out = self.decode(z)
 
-                out = torch.where(out < 0.5, torch.zeros_like(out), torch.ones_like(out))
+                
                 generated_images.append(out)
         return generated_images
 
@@ -252,15 +248,15 @@ class VariationalAutoEncoder(nn.Module):
     # Start training
         for epoch in range(num_epochs):
             loop = tqdm(enumerate(train_loader))
-            for i, x in loop:
+            for i, (x,y) in loop:
                 # Forward pass
                 x = x.to(self.device).view(-1, self.input_dim)
-                x_reconst, mu, sigma = self.forward(x)
+                x_reconst, mu, log_sigma = self.forward(x)
 
-
-                reconst_loss = loss_fn(x_reconst, x)
-                kl_div = - torch.sum(1 + torch.log(sigma.pow(2)) - mu.pow(2) - sigma.pow(2))
-
+                reconst_loss = loss_fn(x_reconst, x).sum(dim=-1).mean()
+          
+                kl_div = - 0.5*torch.sum(1 + log_sigma - mu.pow(2) - torch.exp(log_sigma), dim=-1).mean(dim=0)
+        
                 # Backprop and optimize
                 loss = reconst_loss + kl_div
                 optimizer.zero_grad()

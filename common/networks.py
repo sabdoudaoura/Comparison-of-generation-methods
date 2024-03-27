@@ -89,6 +89,8 @@ class RBM:
         samples = self.gibbs(x,k)
         return samples
 
+    def parameters(self):
+        return self.W.numel() + self.b.numel() + self.a.numel()
 
 class DBN:
     def __init__(self,input_size,hidden_sizes: List,device):
@@ -119,7 +121,8 @@ class DBN:
         samples = x_
         return samples
     
-
+    def parameters(self):
+         return sum(layer.count_parameters() for layer in self.layers)
 
 class DNN(nn.Module):
     def __init__(self,input_size,hidden_sizes: List,out_size,device):

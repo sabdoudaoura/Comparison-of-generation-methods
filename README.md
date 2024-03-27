@@ -18,13 +18,13 @@ The project uses two well-known machine learning databases:
 
 The repository contains four Jupyter Notebooks, each with a specific purpose:
 
-1. Preliminary Tests ([First_test.ipynb]('./First_test.ipynb')): This notebook presents the initial tests performed on the models. It serves as an introduction to the RBM, DBN and DNN architectures and their implementation.
+1. Preliminary Tests ([First_tests.ipynb]('First_tests.ipynb')): This notebook presents the initial tests performed on the models. It serves as an introduction to the RBM, DBN and DNN architectures and their implementation.
 
-2. Alphadigits study ([Alpha_digits.ipynb]('./Alpha_digits.ipynb')): This notebook focuses on the application and evaluation of models on the Alphadigits database. It explores the ability of models to learn and generate alphanumeric characters.
+2. Alphadigits study ([Alpha_digits.ipynb]('Alpha_digits.ipynb')): This notebook focuses on the application and evaluation of models on the Alphadigits database. It explores the ability of models to learn and generate alphanumeric characters.
 
-3. Study on MNIST ([MNIST.ipynb]('./MNIST.ipynb')): In this notebook, models are applied to the MNIST database. The aim is to evaluate their accuracy and efficiency in recognizing handwritten digits.
+3. Study on MNIST ([MNIST.ipynb]('MNIST.ipynb')): In this notebook, models are applied to the MNIST database. The aim is to evaluate their accuracy and efficiency in recognizing handwritten digits.
 
-4. Comparison of Generative Capabilities ([Comparison.ipynb]('./comparison.ipynb')): This final notebook offers an in-depth comparison between the generative capabilities of an MBR, a DBN and a Variational Auto-Encoder (VAE). It aims to identify the strengths and limitations of each model in terms of image generation.
+4. Comparison of Generative Capabilities ([Comparison.ipynb]('comparison.ipynb')): This final notebook offers an in-depth comparison between the generative capabilities of an MBR, a DBN and a Variational Auto-Encoder (VAE). It aims to identify the strengths and limitations of each model in terms of image generation.
 
 
 

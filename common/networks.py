@@ -9,6 +9,16 @@ from typing import List
 from torch.utils.data import DataLoader, TensorDataset
 
 def compute_metrics(logits,true_labels):
+    """
+    Compute the accuracy of the model given predicted logits and true labels.
+
+    Parameters:
+    - logits: A tensor of predicted logits.
+    - true_labels: A tensor of true labels.
+
+    Returns:
+    - accuracy: The accuracy of the model as a float.
+    """
     _, predicted = torch.max(logits, 1)  # Get the index of the maximum value in each row
     true_labels = true_labels.argmax(dim=1)
     correct = (predicted == true_labels).sum().item()
@@ -36,6 +46,14 @@ def calculate_mse(original_images, reconstructed_images):
     return mean_squared_error
 
 class RBM:
+    """
+    A Restricted Boltzmann Machine (RBM) implementation.
+
+    Parameters:
+    - input_size: The size of the input data.
+    - hidden_size: The size of the hidden layer.
+    - device: The device to use for tensor operations.
+    """
     def __init__(self,input_size=320,hidden_size=10,device=None):
         super(RBM,self).__init__()
         self.input_size = input_size
@@ -47,16 +65,43 @@ class RBM:
         self.device = device
     
     def forward(self,inputs):
+        """
+        Compute the forward pass of the RBM (inputs to latent)
+
+        Parameters:
+        - inputs: The input data.
+
+        Returns:
+        - out: The output of the RBM.
+        """
         #print(self.W.device)
         h = F.linear(inputs,self.W, self.b)
         out = torch.sigmoid(h)
         return out
     
     def backward(self,latent):
+        """
+        Compute the backward pass of the RBM (latentt to inputs)
+        Parameters:
+        - latent: The latent variables.
+
+        Returns:
+        - out: The output of the RBM.
+        """
         v = F.linear(latent,self.W.T ,self.a)
         return torch.sigmoid(v)
     
     def gibbs(self,inputs,k=1):
+        """
+        Perform k steps of Gibbs sampling.
+
+        Parameters:
+        - inputs: The input data.
+        - k: The number of Gibbs sampling steps.
+
+        Returns:
+        - x: The output after k steps of Gibbs sampling.
+        """
         x = inputs.clone()
         bs = x.size(0) 
         for i in range(k):
@@ -70,7 +115,14 @@ class RBM:
 
     def train(self,data,n_steps,alpha,batch_size=30,k=1):
         """
-        Contrastive Divergence 1
+        Train the RBM using Contrastive Divergence.
+
+        Parameters:
+        - data: The training data.
+        - n_steps: The number of training steps.
+        - alpha: The learning rate.
+        - batch_size: The batch size.
+        - k: The number of Gibbs sampling steps.
         """
         batch_size = min(batch_size,len(data))
         dataset = TensorDataset(data)  # `data` est votre tenseur
@@ -85,14 +137,38 @@ class RBM:
                 self.a.data = self.a + alpha*(torch.sum(x - x_, dim=0))/batch_size
 
     def generate(self,n_images,k=10):
+        """
+        Generate samples from the RBM.
+
+        Parameters:
+        - n_images: The number of samples to generate.
+        - k: The number of Gibbs sampling steps.
+
+        Returns:
+        - samples: The generated samples.
+        """
         x = torch.randn((n_images,self.input_size),device=self.device)
         samples = self.gibbs(x,k)
         return samples
 
     def parameters(self):
+        """
+        Get the number of parameters in the RBM.
+
+        Returns:
+        - The number of parameters in the RBM.
+        """
         return self.W.numel() + self.b.numel() + self.a.numel()
 
 class DBN:
+    """
+    A Deep Belief Network (DBN) implementation.
+
+    Parameters:
+    - input_size: The size of the input data.
+    - hidden_sizes: A list of sizes for the hidden layers.
+    - device: The device to use for tensor operations.
+    """
     def __init__(self,input_size,hidden_sizes: List,device):
         super(DBN,self).__init__()
         self.input_size = input_size
@@ -102,15 +178,33 @@ class DBN:
             self.layers.append(RBM(hidden_sizes[i],hidden_sizes[i+1],device))
     
     def train(self,data,n_steps,alpha,batch_size=30,k=1):
+        """
+        Train the DBN using layer-wise pretraining.
+
+        Parameters:
+        - data: The training data.
+        - n_steps: The number of training steps.
+        - alpha: The learning rate.
+        - batch_size: The batch size.
+        - k: The number of Gibbs sampling steps.
+        """
         data_ = data.clone()
         for i in trange(len(self.layers)):
             layer = self.layers[i]
             layer.train(data_,n_steps,alpha,batch_size,k)
             data_ = layer.forward(data_)
             
-
-        
     def generate(self,n_images,k):
+        """
+        Generate samples from the DBN.
+
+        Parameters:
+        - n_images: The number of samples to generate.
+        - k: The number of Gibbs sampling steps.
+
+        Returns:
+        - samples: The generated samples.
+        """
         layer = self.layers[-1]
         x = torch.randn((n_images,layer.input_size),device=self.device)
         x_ = layer.gibbs(x,k)
@@ -122,9 +216,24 @@ class DBN:
         return samples
     
     def parameters(self):
-         return sum(layer.count_parameters() for layer in self.layers)
+        """
+        Get the number of parameters in the DBN.
+
+        Returns:
+        - The number of parameters in the DBN.
+        """
+        return sum(layer.count_parameters() for layer in self.layers)
 
 class DNN(nn.Module):
+    """
+    A Deep Neural Network (DNN) implementation.
+
+    Parameters:
+    - input_size: The size of the input data.
+    - hidden_sizes: A list of sizes for the hidden layers.
+    - out_size: The size of the output layer.
+    - device: The device to use for tensor operations.
+    """
     def __init__(self,input_size,hidden_sizes: List,out_size,device):
         super(DNN,self).__init__()
         self.input_size = input_size
@@ -141,9 +250,29 @@ class DNN(nn.Module):
             
             
     def pretrain(self,data,n_steps,alpha,batch_size=30,k=1):
+        """
+        Pretrain the DNN using a DBN.
+
+        Parameters:
+        - data: The training data.
+        - n_steps: The number of pretraining steps.
+        - alpha: The learning rate.
+        - batch_size: The batch size.
+        - k: The number of Gibbs sampling steps.
+        """
         self.dbn.train(data,n_steps,alpha,batch_size,k)
     
     def forward(self,inputs):
+        """
+        Compute the forward pass of the DNN.
+
+        Parameters:
+        - inputs: The input data.
+
+        Returns:
+        - out: The output of the DNN.
+        """
+
         for layer in self.dbn.layers:
             inputs = layer.forward(inputs)
         inputs = self.fc(inputs)
@@ -151,6 +280,14 @@ class DNN(nn.Module):
         return out
     
     def train(self,dataloader,n_epochs,lr):
+        """
+        Train the DNN using backpropagation.
+
+        Parameters:
+        - dataloader: The training data loader.
+        - n_epochs: The number of training epochs.
+        - lr: The learning rate.
+        """
         optimizer = torch.optim.Adam(self.parameters(),lr=lr)
         for i in trange(n_epochs):
             avg_loss, avg_acc = 0.0, 0.0
@@ -167,6 +304,15 @@ class DNN(nn.Module):
 
     @torch.no_grad()
     def evaluate(self,val_loader):
+        """
+        Evaluate the DNN on a validation set.
+
+        Parameters:
+        - val_loader: The validation data loader.
+
+        Returns:
+        - avg_acc: The average accuracy on the validation set.
+        """
         avg_loss, avg_acc = 0.0, 0.0
         n = 0.
         for data in val_loader:

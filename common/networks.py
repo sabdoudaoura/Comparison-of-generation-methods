@@ -329,6 +329,14 @@ class DNN(nn.Module):
         return avg_acc
 
 class VariationalAutoEncoder(nn.Module):
+    """
+    A VariationalAutoEncoder (VAE) implementation.
+
+    Parameters:
+    - input_dim: The size of the input data.
+    - z_dim: The size of the bottle neck size.
+    - device: The device to use for tensor operations.
+    """
     def __init__(self, input_dim, z_dim, device):
         super().__init__()
 
@@ -350,6 +358,14 @@ class VariationalAutoEncoder(nn.Module):
         self.hid_2img = nn.Linear(512, self.input_dim)
 
     def encode(self, x):
+        """
+        Encoder function of the VAE.
+
+        Parameters:
+        - x: The training data.
+        - mu : paramter of the hidden distribution
+        - log_sigma : paramter of the hidden distribution
+        """
         h = F.relu(self.img_2hid1(x))
         h = F.relu(self.img_2hid2(h))
         mu = self.hid_2mu(h)
@@ -357,12 +373,32 @@ class VariationalAutoEncoder(nn.Module):
         return mu, log_sigma
 
     def decode(self, z):
+        """
+        decoder function of the VAE.
+
+        Parameters:
+        - z:  Data in the latent space
+        - x : The reconstructed data
+
+        """
         new_h = F.relu(self.z_2hid1(z))
         new_h = F.relu(self.z_2hid3(new_h))
         x = torch.sigmoid(self.hid_2img(new_h))
         return x
 
     def forward(self, x):
+      
+      """
+        Compute the forward pass of the VAE.
+
+        Parameters:
+        - inputs: The input data.
+
+        Returns:
+        - out: The output of the DNN
+        - mu : encoder output
+        - log_sigma : encoder output
+        """
       mu, log_sigma = self.encode(x)
 
       # Sample from latent distribution from encoder
@@ -373,6 +409,16 @@ class VariationalAutoEncoder(nn.Module):
       return x, mu, log_sigma
 
     def generate_images(self, num_samples):
+        """
+        Generate samples from the VAE.
+
+        Parameters:
+        - num_samples: The number of samples to generate.
+
+
+        Returns:
+        - samples: The generated samples.
+        """
         with torch.no_grad():
             z = torch.randn(num_samples, self.z_dim).to(self.device)
             samples = self.decode(z)
@@ -394,6 +440,15 @@ class VariationalAutoEncoder(nn.Module):
         return generated_images
 
     def train(self,num_epochs, optimizer, loss_fn, train_loader):
+        """
+        Training loop of the VAE
+
+        Parameters:
+        - num_epochs: The number of training epochs.
+        - optimizer: The optimizer to be used.
+        - loss_fn: The loss function to use.
+        - train_loader: The dataloader to use to load the data.
+        """
     # Start training
         for epoch in range(num_epochs):
             loop = tqdm(enumerate(train_loader))
